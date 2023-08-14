@@ -1,0 +1,22 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.yuriy.medialibraryserviceapp.shared'
+    compileSdk 34
+    defaultConfig {
+        minSdkVersion 28
+        targetSdkVersion 34
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+}
+
+dependencies {
+    implementation libs.media
+    implementation libs.media3.exoplayer
+    implementation libs.media3.session
+}

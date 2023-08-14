@@ -1,0 +1,19 @@
+[versions]
+agp = "8.2.0-alpha15"
+kotlin = "1.9.0"
+core-ktx = "1.10.1"
+appcompat = "1.6.1"
+media = "1.6.0"
+media3-exoplayer = "1.1.0"
+
+[libraries]
+core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
+appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+media = { group = "androidx.media", name = "media", version.ref = "media" }
+media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3-exoplayer" }
+media3-session = { module = "androidx.media3:media3-session", version.ref = "media3-exoplayer" }
+
+[plugins]
+androidApplication = { id = "com.android.application", version.ref = "agp" }
+kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+
