@@ -108,7 +108,7 @@ class MusicService : MediaLibraryService() {
         ): ListenableFuture<LibraryResult<Void>> {
             log("Unsubscribe from $parentId")
             mBrowser = browser
-            return super.onUnsubscribe(session, browser, parentId)
+            return Futures.immediateFuture(LibraryResult.ofVoid())
         }
 
         override fun onGetLibraryRoot(
