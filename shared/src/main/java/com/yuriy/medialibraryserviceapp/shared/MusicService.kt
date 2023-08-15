@@ -23,6 +23,8 @@ import com.google.common.util.concurrent.ListenableFuture
 class MusicService : MediaLibraryService() {
 
     private lateinit var mSession: MediaLibrarySession
+    private var mBrowser: MediaSession.ControllerInfo? = null
+    private lateinit var mHandler: Handler
 
     private val mPlayer by lazy {
         val audioAttributes = AudioAttributes.Builder()
@@ -60,6 +62,9 @@ class MusicService : MediaLibraryService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        if (this@MusicService::mHandler.isInitialized.not()) {
+            mHandler.removeCallbacksAndMessages(null)
+        }
         mSession.run {
             release()
             if (player.playbackState != Player.STATE_IDLE) {
@@ -77,18 +82,44 @@ class MusicService : MediaLibraryService() {
         private const val TAG = "MLSA"
         private const val MEDIA_ID_ROOT = "MEDIA_ID_ROOT"
         private const val MEDIA_ID_RADIOS = "MEDIA_ID_RADIOS"
+
+        private fun log(msg: String) {
+            Log.d(TAG, "[${Thread.currentThread().name}] $msg")
+        }
     }
 
     private inner class ServiceCallback : MediaLibrarySession.Callback {
+
+        override fun onSubscribe(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            parentId: String,
+            params: LibraryParams?
+        ): ListenableFuture<LibraryResult<Void>> {
+            log("Subscribe to $parentId")
+            mBrowser = browser
+            return Futures.immediateFuture(LibraryResult.ofVoid())
+        }
+
+        override fun onUnsubscribe(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            parentId: String
+        ): ListenableFuture<LibraryResult<Void>> {
+            log("Unsubscribe from $parentId")
+            mBrowser = browser
+            return super.onUnsubscribe(session, browser, parentId)
+        }
 
         override fun onGetLibraryRoot(
             session: MediaLibrarySession,
             browser: MediaSession.ControllerInfo,
             params: LibraryParams?
         ): ListenableFuture<LibraryResult<MediaItem>> {
+            mBrowser = browser
             val rootMediaItem = buildRootMediaItem()
             val libraryParams = LibraryParams.Builder().build()
-            Log.d(TAG, "Get root")
+            log("Get root")
             return Futures.immediateFuture(LibraryResult.ofItem(rootMediaItem, libraryParams))
         }
 
@@ -100,7 +131,8 @@ class MusicService : MediaLibraryService() {
             pageSize: Int,
             params: LibraryParams?
         ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
-            Log.d(TAG, "Get children for $parentId")
+            log("Get children for $parentId")
+            mBrowser = browser
             val children = ArrayList<MediaItem>()
             when (parentId) {
                 MEDIA_ID_ROOT -> {
@@ -112,10 +144,27 @@ class MusicService : MediaLibraryService() {
                         children.add(buildPlayable(i.toString()))
                     }
 
-                    Handler(Looper.myLooper()!!).postDelayed({
-                        Log.d(TAG, "Trigger notifyChildrenChanged for $parentId")
-                        session.notifyChildrenChanged(browser, parentId, children.size, params)
-                    }, 10_000)
+                    // Dynamic update of the children:
+
+                    // From the thread:
+                    Thread {
+                        Thread.sleep(5000)
+                        log("Trigger notifyChildrenChanged for $parentId")
+                        mBrowser?.let {
+                            mSession.notifyChildrenChanged(it, MEDIA_ID_ROOT, 250, null)
+                        }
+                    }.start()
+
+                    // From the handler:
+//                    if (this@MusicService::mHandler.isInitialized.not()) {
+//                        mHandler = Handler(Looper.myLooper()!!)
+//                    }
+//                    mHandler.postDelayed({
+//                        log("Trigger notifyChildrenChanged for $parentId")
+//                        mBrowser?.let {
+//                            mSession.notifyChildrenChanged(it, MEDIA_ID_ROOT, children.size, params)
+//                        }
+//                    }, 10_000)
                 }
             }
             return Futures.immediateFuture(LibraryResult.ofItemList(children, params))
